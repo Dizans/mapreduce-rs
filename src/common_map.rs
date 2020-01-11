@@ -23,7 +23,7 @@ pub fn do_map(
         let filename = reduce_name(job_name, map_task, i);
         let mut file = fs::File::create(&filename)
             .expect(&format!("create file {} failed", filename));
-        reduce_files[i] = file;
+        reduce_files.push(file)
     }
 
     let kvs: Vec<KeyValue> = map_f(in_file, &contents);
