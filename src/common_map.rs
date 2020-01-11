@@ -35,6 +35,8 @@ pub fn do_map(
             .expect("failed to conver kv to string");
         inter_file.write_all(&json_string.into_bytes())
             .expect("write string to file failed");
+        inter_file.write_all("\n".as_bytes())
+            .expect("write \\n failed");
     }
 }
 
