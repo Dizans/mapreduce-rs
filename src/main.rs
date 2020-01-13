@@ -11,14 +11,14 @@ use clap::{Arg, App, SubCommand};
 
 use common_map::do_map;
 
-fn main(){
+fn main() {
     let matches = App::new("mapreduce")
-                    .author("dizansyu dizansyu@gmail.com")
-                    .arg(Arg::with_name("files")
-                         .required(true)
-                         .multiple(true)
-                         .help("files waiting to mapreduce"))
-                    .get_matches();
+        .author("dizansyu dizansyu@gmail.com")
+        .arg(Arg::with_name("files")
+            .required(true)
+            .multiple(true)
+            .help("files waiting to mapreduce"))
+        .get_matches();
 
     let filenames: Vec<_> = matches.values_of("files")
         .unwrap().collect();
