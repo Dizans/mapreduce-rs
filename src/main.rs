@@ -1,8 +1,9 @@
 mod common_map;
+mod common_reduce;
 mod master;
+mod master_splitmerge;
 mod utils;
 mod wc;
-mod common_reduce;
 
 use std::env;
 use std::fs::File;
@@ -12,6 +13,8 @@ use clap::{App, Arg, SubCommand};
 
 use common_map::do_map;
 use common_reduce::do_reduce;
+use master_splitmerge::merge;
+use utils::merge_name;
 
 fn main() {
     let matches = App::new("mapreduce")
@@ -26,16 +29,16 @@ fn main() {
 
     let filenames: Vec<_> = matches.values_of("files").unwrap().collect();
 
-    let n_map = 1;
+    let n_map = filenames.len();
     let n_reduce = 2;
-    for filename in filenames {
-        println!("processing: {}", filename);
-        for n in 0..n_map{
-            do_map("word_count", n, filename, n_reduce, wc::map);
-        }
+    let job_name = "world_count";
+    for n in 0..n_map {
+        do_map(job_name, n, filenames[n], n_reduce, wc::map);
     }
 
-    for n in 0..n_reduce{
-        do_reduce("word_count", n, "final_result", n_map, wc::reduce);
+    for n in 0..n_reduce {
+        do_reduce(job_name, n, &merge_name(job_name, n), n_map, wc::reduce);
     }
+
+    merge(job_name, n_reduce);
 }
