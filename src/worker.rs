@@ -39,8 +39,7 @@ async fn register() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>>{
+async fn run_worker(addr: &str) -> Result<(), Box<dyn std::error::Error>>{
     let addr = "[::1]:9999".parse().unwrap();
     
     println!("Worker listening on: {}", addr);
@@ -54,4 +53,3 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     Ok(())
 }
-
