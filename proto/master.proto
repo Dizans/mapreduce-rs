@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+
+package master;
+
+service Master{
+	rpc Register(WorkerAddr) returns (RegisterResponse) {}
+}
+
+message WorkerAddr{
+	string addr = 1;
+}
+
+message RegisterResponse{
+
+};

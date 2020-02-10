@@ -1,54 +1,47 @@
-use crate::common_rpc::Master;
-use futures::{
-    future::{self, Ready},
-    prelude::*,
-};
-use std::{
-    io,
-    net::{IpAddr, SocketAddr},
-};
-use tarpc::{
-    context,
-    server::{self, Channel, Handler},
-};
-use tokio::sync::mpsc;
-use std::sync::{Mutex, Arc};
-use tokio_serde::formats::Json;
+use std::sync::Arc;
 
-#[derive(Clone)]
-struct MasterServer{
-    socket_addr: SocketAddr,
-    workers: Arc<Mutex<Vec<String>>>,
+use tonic::{Request, Response, Status};
+use tonic::transport::Server;
+use tokio::sync::Mutex;
+
+use master::master_server::{Master, MasterServer};
+use master::{WorkerAddr, RegisterResponse};
+
+use futures::{Stream, StreamExt};
+
+pub mod master {
+    tonic::include_proto!("master");
 }
 
-impl Master for MasterServer {
-    type RegisterFut = Ready<()>;
 
-    fn register(self, _: context::Context, addr: String) -> Self::RegisterFut{
-        let mut v = self.workers.lock().unwrap();
-        v.push(addr);
-        println!("{:?}", v);
-        future::ready(())
+struct MasterService{
+    workers: Mutex<Vec<String>>,
+}
+
+#[tonic::async_trait]
+impl Master for MasterService {
+    async fn register(&self, request: Request<WorkerAddr>) -> Result<Response<RegisterResponse>,Status>{
+        println!("got a registr request from {:?}", request);
+        let mut workers = self.workers.lock().await;
+        let addr = request.into_inner().addr;
+        workers.push(addr);
+        Ok(Response::new(RegisterResponse::default()))
     }
 }
 
-pub async fn start_server() -> io::Result<()> {
-    let server_addr = (IpAddr::from([0, 0, 0, 0]), 8383);
-    tarpc::serde_transport::tcp::listen(&server_addr, Json::default)
-        .await?
-        .filter_map(|r| future::ready(r.ok()))
-        .map(server::BaseChannel::with_defaults)
-        .max_channels_per_key(1, |t| t.as_ref().peer_addr().unwrap().ip())
-        .map(|channel| {
-            let server = MasterServer{ 
-                socket_addr: channel.as_ref().as_ref().peer_addr().unwrap(),
-                workers: Arc::new(Mutex::new(vec![])),
-            };
-            channel.respond_with(server.serve()).execute()
-        })
-        .buffer_unordered(10)
-        .for_each(|_| async {})
-        .await;
+pub async fn start_server() -> Result<(), Box<dyn std::error::Error>>{
+    let addr = "[::1]:10000".parse().unwrap();
+    
+    println!("MasterServer listening on: {}", addr);
+
+
+    let route_guide = MasterService{
+        workers: Mutex::new(Vec::new()),
+    };
+
+    let svc = MasterServer::new(route_guide);
+
+    Server::builder().add_service(svc).serve(addr).await?;
 
     Ok(())
 }
