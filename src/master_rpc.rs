@@ -25,6 +25,7 @@ impl Master for MasterService {
         let mut workers = self.workers.lock().await;
         let addr = request.into_inner().addr;
         workers.push(addr);
+        println!("current workders: {:?}", workers);
         Ok(Response::new(RegisterResponse::default()))
     }
 }
@@ -33,7 +34,6 @@ pub async fn start_server() -> Result<(), Box<dyn std::error::Error>>{
     let addr = "[::1]:10000".parse().unwrap();
     
     println!("MasterServer listening on: {}", addr);
-
 
     let route_guide = MasterService{
         workers: Mutex::new(Vec::new()),

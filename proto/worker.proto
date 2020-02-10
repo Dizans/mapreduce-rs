@@ -1,0 +1,20 @@
+
+syntax = "proto3";
+
+package worker;
+
+service Worker{
+	rpc DoTask(DoTaskArg) returns (DoTaskResponse) {}
+}
+
+message DoTaskArg{
+	string JobName= 1;
+	string File= 2;
+	string Phase= 3;
+	int32 TaskNumber= 4;
+	int32 NumOtherPhase = 5;
+}
+
+message DoTaskResponse{
+
+}

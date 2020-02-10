@@ -1,6 +1,5 @@
 mod common_map;
 mod common_reduce;
-mod common_rpc;
 mod master;
 mod master_rpc;
 mod master_splitmerge;
