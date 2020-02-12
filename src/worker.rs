@@ -1,19 +1,14 @@
-use master::master_client::MasterClient;
-use master::WorkerAddr;
-
-pub mod master {
-    tonic::include_proto!("master");
-}
-
-use worker::worker_server::{Worker,WorkerServer};
-use worker::{DoTaskArg,DoTaskResponse};
-
-use tonic::transport::Server;
+use tonic::transport::{Server, Channel};
 use tonic::{Request, Response, Status};
 
-pub mod worker {
-    tonic::include_proto!("worker");
+pub mod mr {
+    tonic::include_proto!("mr");
 }
+
+use mr::master_client::MasterClient;
+use mr::worker_server::{Worker,WorkerServer};
+use mr::{DoTaskArg,WorkerAddr,Empty};
+
 
 #[derive(Debug)]
 pub struct WorkerService{
@@ -21,14 +16,13 @@ pub struct WorkerService{
 
 #[tonic::async_trait]
 impl Worker for WorkerService{
-    async fn do_task(&self, request: Request<DoTaskArg>) -> Result<Response<DoTaskResponse>, Status>{
-        Ok(Response::new(DoTaskResponse::default()))
+    async fn do_task(&self, request: Request<DoTaskArg>) -> Result<Response<Empty>, Status>{
+        // TODO
+        Ok(Response::new(Empty::default()))
     }
 }
 
-async fn register() -> Result<(), Box<dyn std::error::Error>> {
-    let mut client = MasterClient::connect("http://[::1]:10000").await?;
-    
+async fn register(client: &mut MasterClient<Channel>) -> Result<(), Box<dyn std::error::Error>> {
     let response = client
         .register(Request::new(WorkerAddr{
              addr: "127.0.0.1".to_owned()
@@ -38,12 +32,18 @@ async fn register() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+async fn shutdown(client:&mut MasterClient<Channel>) -> Result<(), Box<dyn std::error::Error>> {
+    let response = client
+        .shutdown(Request::new(Empty::default()))
+        .await?;
+    println!("RESPONSE = {:?}", response);
+    Ok(())
+}
 
 async fn run_worker(addr: &str) -> Result<(), Box<dyn std::error::Error>>{
-    let addr = "[::1]:9999".parse().unwrap();
-    
+    // let addr = "[::1]:9999".parse().unwrap();
+    let addr = addr.parse().expect("Invalid worker addr");
     println!("Worker listening on: {}", addr);
-
 
     let route_guide = WorkerService{};
 
@@ -53,3 +53,4 @@ async fn run_worker(addr: &str) -> Result<(), Box<dyn std::error::Error>>{
 
     Ok(())
 }
+
