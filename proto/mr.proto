@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+
+package mr;
+
+service Master{
+	rpc Register(WorkerAddr) returns (Empty) {}
+	rpc Shutdown(Empty) returns (Empty) {}
+}
+
+service Worker{
+	rpc DoTask(DoTaskArg) returns (Empty) {}
+}
+
+message DoTaskArg{
+	string JobName= 1;
+	string File= 2;
+	string Phase= 3;
+	int32 TaskNumber= 4;
+	int32 NumOtherPhase = 5;
+}
+
+message WorkerAddr{
+	string addr = 1;
+}
+
+message Empty{
+
+};
