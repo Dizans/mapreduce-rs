@@ -32,14 +32,6 @@ async fn register(client: &mut MasterClient<Channel>) -> Result<(), Box<dyn std:
     Ok(())
 }
 
-async fn shutdown(client:&mut MasterClient<Channel>) -> Result<(), Box<dyn std::error::Error>> {
-    let response = client
-        .shutdown(Request::new(Empty::default()))
-        .await?;
-    println!("RESPONSE = {:?}", response);
-    Ok(())
-}
-
 async fn run_worker(addr: &str) -> Result<(), Box<dyn std::error::Error>>{
     // let addr = "[::1]:9999".parse().unwrap();
     let addr = addr.parse().expect("Invalid worker addr");

@@ -6,10 +6,12 @@ pub struct KeyValue {
     pub v: String,
 }
 
+#[derive(Debug, Clone)]
 pub enum JobPhase {
     MapPhase,
     ReducePhase,
 }
+
 
 pub fn merge_name(job_name: &str, reduce_task: usize) -> String {
     format!("mrtmp.{}-res-{}", job_name, reduce_task)
