@@ -2,8 +2,6 @@ use tonic::{Request, Response, Status};
 use tonic::transport::Server;
 use tokio::sync::Mutex;
 
-use std::thread;
-
 pub mod mr {
     tonic::include_proto!("mr");
 }
