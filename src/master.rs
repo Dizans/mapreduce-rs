@@ -5,6 +5,8 @@ use std::thread;
 use crate::common_map::do_map;
 use crate::common_reduce::do_reduce;
 
+pub use crate::master_rpc::start_server as start_master_server;
+
 pub fn run<F: Fn(JobPhase)>(
     job_name: String,
     files: &Vec<String>,
@@ -65,3 +67,4 @@ fn seq_finish() {}
 fn wc_seq() {
     sequential("test".to_owned(), vec!["test".to_owned()], 1, wc::map, wc::reduce)
 }
+
