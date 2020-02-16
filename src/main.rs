@@ -5,6 +5,8 @@ mod master_rpc;
 mod master_splitmerge;
 mod utils;
 mod wc;
+mod common_rpc;
+mod schedule;
 
 use std::env;
 use std::fs::File;

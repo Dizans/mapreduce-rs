@@ -1,4 +1,4 @@
-#[deny(dead_code)]
+#![allow(dead_code, unused_variables)]
 use crate::utils::*;
 use crate::wc;
 use std::thread;
@@ -48,6 +48,16 @@ pub fn sequential(
             seq_finish,
         )
     );
+}
+#[allow(non_snake_case)]
+pub fn distribucted(
+    job_name: String,
+    files: Vec<String>,
+    n_reduce: usize,
+    mapF: fn(&str, &str) -> Vec<KeyValue>,
+    reduceF: fn(&str, &Vec<String>) -> String,
+) {
+    unimplemented!();    
 }
 
 fn seq_finish() {}
