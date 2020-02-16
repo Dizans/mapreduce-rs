@@ -2,6 +2,8 @@ use tonic::{Request, Response, Status};
 use tonic::transport::Server;
 use tokio::sync::Mutex;
 
+use std::thread;
+
 pub mod mr {
     tonic::include_proto!("mr");
 }
@@ -11,6 +13,9 @@ use mr::{WorkerAddr, Empty};
 
 struct MasterService{
     workers: Mutex<Vec<String>>,
+    job_name: String,
+    files: Mutex<Vec<String>>,
+    n_reduce: usize,
 }
 
 #[tonic::async_trait]
@@ -30,14 +35,25 @@ impl Master for MasterService {
     }
 }
 
+
+impl MasterService{
+    pub fn default() -> Self{
+        MasterService{
+            workers: Mutex::new(Vec::new()),
+            job_name: String::default(),
+            files: Mutex::new(Vec::new()),
+            n_reduce: 0,
+        }
+    }
+    
+}
+
 pub async fn start_server() -> Result<(), Box<dyn std::error::Error>>{
     let addr = "[::1]:10000".parse().unwrap();
     
     println!("MasterServer listening on: {}", addr);
 
-    let route_guide = MasterService{
-        workers: Mutex::new(Vec::new()),
-    };
+    let route_guide = MasterService::default();
 
     let svc = MasterServer::new(route_guide);
 
