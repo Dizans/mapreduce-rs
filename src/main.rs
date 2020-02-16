@@ -16,7 +16,7 @@ use clap::{App, Arg, SubCommand};
 
 use common_map::do_map;
 use common_reduce::do_reduce;
-use master_rpc::start_server;
+use master::start_master_server;
 use master_splitmerge::merge;
 use utils::merge_name;
 
@@ -46,5 +46,5 @@ async fn main() {
     // }
 
     // merge(job_name, n_reduce);
-    let server = start_server().await;
+    let server = start_master_server().await;
 }
