@@ -20,6 +20,10 @@ impl Worker for WorkerService{
         // TODO
         Ok(Response::new(Empty::default()))
     }
+    async fn shutdown(&self, _: Request<Empty>) -> Result<Response<Empty>,Status>{
+        println!("shuting down master server");
+        std::process::exit(0x0111);
+    }
 }
 
 async fn register(client: &mut MasterClient<Channel>) -> Result<(), Box<dyn std::error::Error>> {

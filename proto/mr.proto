@@ -10,6 +10,7 @@ service Master{
 
 service Worker{
 	rpc DoTask(DoTaskArg) returns (Empty) {}
+	rpc Shutdown(Empty) returns (Empty) {}
 }
 
 message DoTaskArg{
