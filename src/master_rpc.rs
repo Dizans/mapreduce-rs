@@ -1,6 +1,7 @@
-use std::sync::Arc;
+use std::time::Duration;
 
-use tokio::sync::{mpsc, broadcast};
+use tokio::time::delay_for;
+use tokio::sync::broadcast;
 use tokio::sync::Mutex;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
@@ -10,12 +11,13 @@ pub mod mr {
 }
 
 use mr::master_server::{Master, MasterServer};
+use mr::master_client::MasterClient;
 use mr::worker_client::WorkerClient;
 use mr::{Empty, WorkerAddr};
-
-use crate::master::run;
 use crate::schedule::schedule;
 use crate::utils::*;
+use crate::master_splitmerge::merge;
+
 
 struct MasterService {
     workers: Mutex<Vec<String>>,
@@ -28,8 +30,9 @@ impl Master for MasterService {
         println!("got a registr request from {:?}", request);
         let mut workers = self.workers.lock().await;
         let addr = request.into_inner().addr;
-        workers.push(addr);
+        workers.push(addr.clone());
         println!("current workders: {:?}", workers);
+        self.sender.send(addr).unwrap();
         Ok(Response::new(Empty::default()))
     }
 
@@ -38,7 +41,10 @@ impl Master for MasterService {
         let workders = self.workers.lock().await;
         for worker in workders.iter(){
             let mut client = WorkerClient::connect(format!("{}", worker)).await.unwrap();
-            client.shutdown(Request::new(Empty::default())).await;
+            match client.shutdown(Request::new(Empty::default())).await{
+                Ok(_) => {},
+                Err(_) => {},
+            };
         }
         std::process::exit(0x0111);
     }
@@ -58,30 +64,50 @@ pub async fn distribucted(
     job_name: String,
     files: Vec<String>,
     n_reduce: usize,
+    master_addr: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let (tx, _rx) = broadcast::channel(3);
 
     let t = tx.clone();
+
+    let addr_for_finish = master_addr.clone();
     let handle = tokio::spawn(async move{
-        run(
-            job_name.clone(),
-            &files,
-            n_reduce,
-            |phase| {
-                schedule(
-                    job_name.clone(), 
-                    files.clone(), n_reduce, phase, t.subscribe());
-            },
-            seq_finish,
-        )
+        schedule(
+                job_name.clone(), 
+                files.clone(), 
+                n_reduce, 
+                JobPhase::MapPhase, 
+                t.subscribe()).await;
+
+        schedule(
+                job_name.clone(), 
+                files.clone(), 
+                n_reduce, 
+                JobPhase::ReducePhase, 
+                t.subscribe()).await;
+        finish(addr_for_finish).await;
+        merge(&job_name, n_reduce);
     });
     let route_guide = MasterService::new(tx);
 
-    let addr = "[::1]:10000".parse().unwrap();
+    let addr = master_addr.parse().unwrap();
     let svc = MasterServer::new(route_guide);
-    Server::builder().add_service(svc).serve(addr).await?;
-    handle.await;
+    tokio::spawn(async move {
+        Server::builder().add_service(svc).serve(addr).await
+            .expect("start master server failed");
+    });
+    
+    delay_for(Duration::from_secs(10)).await;
+    handle.await.expect("run job failed");
     Ok(())
 }
 
-fn seq_finish() {}
+
+async fn finish(addr: String){
+    // let mut client = MasterClient::connect(addr).await
+    //                 .expect("connect master server failed");
+    
+    // let _ = client.shutdown(Request::new(Empty::default())).await
+    //             .expect("shutdown server failed");
+    println!("finished")
+}

@@ -1,50 +1,52 @@
 mod common_map;
 mod common_reduce;
+mod common_rpc;
 mod master;
 mod master_rpc;
 mod master_splitmerge;
+mod schedule;
 mod utils;
 mod wc;
-mod common_rpc;
-mod schedule;
+mod worker;
 
 use std::env;
-use std::fs::File;
-use std::io::prelude::*;
 
-use clap::{App, Arg, SubCommand};
-
-use common_map::do_map;
-use common_reduce::do_reduce;
-use master::start_master_server;
-use master_splitmerge::merge;
-use utils::merge_name;
+use master::sequential;
+use master_rpc::distribucted;
+use worker::run_worker;
 
 #[tokio::main]
 async fn main() {
-    // let matches = App::new("mapreduce")
-    //     .author("dizansyu dizansyu@gmail.com")
-    //     .arg(
-    //         Arg::with_name("files")
-    //             .required(true)
-    //             .multiple(true)
-    //             .help("files waiting to mapreduce"),
-    //     )
-    //     .get_matches();
+    let args: Vec<String> = env::args().collect();
+    for arg in &args{
+        println!("{}", arg);
+    }
+    if args.len() < 4{
+       usage(); 
+    }else if &args[1]=="master"{
+        let (args ,files) = args.split_at(3);
+        let files = files.to_owned();
+        let addr = args[2].to_owned();
+        
+        println!("{:?}", addr);
 
-    // let filenames: Vec<_> = matches.values_of("files").unwrap().collect();
+        if &args[2] == "sequential"{
+            sequential("wcseq".to_owned(), files, 3, wc::map, wc::reduce);
+        }else{
+            distribucted("wcseq".to_owned(), files, 3, addr).await.unwrap();
+        }
+    }else{
+        run_worker(args[2].clone(), args[3].clone()).await;
+    }
+}
 
-    // let n_map = filenames.len();
-    // let n_reduce = 2;
-    // let job_name = "world_count";
-    // for n in 0..n_map {
-    //     do_map(job_name, n, filenames[n], n_reduce, wc::map);
-    // }
 
-    // for n in 0..n_reduce {
-    //     do_reduce(job_name, n, &merge_name(job_name, n), n_map, wc::reduce);
-    // }
-
-    // merge(job_name, n_reduce);
-    let server = start_master_server().await;
+fn usage(){
+    let usage = r"
+Can be run in 3 ways:
+1) Sequential (e.g., cargo run -- master sequential x1.txt .. xN.txt)
+2) Master (e.g., cargo run -- master 127.0.0.1:7777 x1.txt .. xN.txt)
+3) Worker (e.g., cargo run -- worker 127.0.0.1:7777 127.0.0.1:8888 &)
+";
+    println!("{}", usage);
 }

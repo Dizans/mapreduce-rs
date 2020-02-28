@@ -3,8 +3,8 @@ use crate::common_map::do_map;
 use crate::common_reduce::do_reduce;
 use crate::utils::*;
 use crate::wc;
+use crate::master_splitmerge::merge;
 use std::thread;
-use tokio::sync::mpsc;
 
 pub use crate::master_rpc::distribucted as start_master_server;
 
@@ -19,7 +19,7 @@ pub fn run<F: Fn(JobPhase)>(
     schedule(JobPhase::MapPhase);
     schedule(JobPhase::ReducePhase);
     finish();
-    // TODO: to merge
+    merge(&job_name, n_reduce);
     println!("Run finish");
 }
 
@@ -31,7 +31,7 @@ pub fn sequential(
     mapF: fn(&str, &str) -> Vec<KeyValue>,
     reduceF: fn(&str, &Vec<String>) -> String,
 ) {
-    thread::spawn(move || {
+    let handle = thread::spawn(move || {
         run(
             job_name.clone(),
             &files,
@@ -57,19 +57,12 @@ pub fn sequential(
             seq_finish,
         )
     });
-}
-#[allow(non_snake_case)]
-pub fn distribucted(
-    job_name: String,
-    files: Vec<String>,
-    n_reduce: usize,
-    mapF: fn(&str, &str) -> Vec<KeyValue>,
-    reduceF: fn(&str, &Vec<String>) -> String,
-) {
-    unimplemented!();
+    handle.join().expect("sequential join failed");
 }
 
-fn seq_finish() {}
+fn seq_finish() {
+    println!("check the mrtmp.{{jobname}} file for result");
+}
 
 fn wc_seq() {
     sequential(

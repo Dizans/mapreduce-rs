@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 use tonic::transport::Channel;
-use tonic::{Request, Response, Status};
+use tonic::Request;
 
+use std::net::SocketAddr;
 pub mod mr {
     tonic::include_proto!("mr");
 }
@@ -9,8 +10,7 @@ pub mod mr {
 use mr::master_client::MasterClient;
 
 use mr::worker_client::WorkerClient;
-use mr::worker_server::{Worker, WorkerServer};
-use mr::{DoTaskArg, Empty, WorkerAddr};
+use mr::{DoTaskArg, Empty};
 
 pub use mr::DoTaskArg as TaskArg;
 
@@ -23,7 +23,12 @@ pub async fn master_shutdown(
 }
 
 pub async fn worker_do_task(addr: &str, arg: DoTaskArg) -> Result<(), Box<dyn std::error::Error>> {
-    let mut client = WorkerClient::connect("http://[::1]:10000").await?;
+    let mut addr: String = addr.to_owned();
+    if ! addr.starts_with(&"http"){
+        addr = format!("http://{}", addr);
+    }
+    
+    let mut client = WorkerClient::connect(addr).await?;
     client.do_task(arg).await?;
     Ok(())
 }
