@@ -1,7 +1,6 @@
-use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs;
-use std::io::{self, prelude::*, BufReader, BufWriter};
+use std::io::{prelude::*, BufReader};
 
 use serde_json;
 
@@ -28,6 +27,7 @@ pub fn merge(job_name: &str, n_reduce: usize) {
 
     let mut file = fs::File::create(&format!("mrtmp.{}", job_name)).expect("create file failed");
     for k in keys {
-        file.write_all(&format!("{}: {}\n", k, kvs.get(k).unwrap()).into_bytes());
+        file.write_all(&format!("{}: {}\n", k, kvs.get(k).unwrap()).into_bytes())
+            .expect("failed to write");
     }
 }

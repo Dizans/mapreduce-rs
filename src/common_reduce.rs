@@ -1,6 +1,5 @@
-use std::cmp::Ordering;
 use std::fs;
-use std::io::{self, prelude::*, BufReader};
+use std::io::{prelude::*, BufReader};
 
 use crate::utils::{reduce_name, KeyValue};
 use serde_json;

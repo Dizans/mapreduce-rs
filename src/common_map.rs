@@ -20,7 +20,7 @@ pub fn do_map(
 
     for i in 0..n_reduce {
         let filename = reduce_name(job_name, map_task, i);
-        let mut file =
+        let file =
             fs::File::create(&filename).expect(&format!("create file {} failed", filename));
         reduce_files.push(file)
     }
