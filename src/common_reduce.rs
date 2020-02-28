@@ -1,8 +1,12 @@
 use std::fs;
+use std::path::PathBuf;
+use std::env;
+
 use std::io::{prelude::*, BufReader};
 
 use crate::utils::{reduce_name, KeyValue};
 use serde_json;
+
 
 pub fn do_reduce(
     job_name: &str,
@@ -12,9 +16,17 @@ pub fn do_reduce(
     reduce_f: fn(&str, &Vec<String>) -> String,
 ) {
     let mut inter_files: Vec<fs::File> = Vec::with_capacity(n_map);
+
+    // let in_file_path = PathBuf::from(in_file);
+    // let in_file_dir = in_file_path.parent().unwrap();
+
     for i in 0..n_map {
         let filename = reduce_name(job_name, i, reduce_task);
-        let file = fs::File::open(filename).expect("open file failed");
+        let mut current_dir = env::current_dir().unwrap();
+        current_dir.push("data");
+        current_dir.push(filename);
+
+        let file = fs::File::open(current_dir).expect("open file failed");
         inter_files.push(file);
     }
 
@@ -30,10 +42,12 @@ pub fn do_reduce(
 
     kvs.sort_by(|l, r| l.k.partial_cmp(&r.k).unwrap());
 
+    let mut out_file_path = PathBuf::from("./data");
+    out_file_path.push(outfile);
     let mut file = fs::OpenOptions::new()
         .append(true)
         .create(true)
-        .open(outfile)
+        .open(out_file_path)
         .expect("append/create file failed");
 
     let mut i = 0;

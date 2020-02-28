@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use std::path::PathBuf;
 use std::io::{prelude::*, BufReader};
 
 use serde_json;
@@ -10,7 +11,10 @@ pub fn merge(job_name: &str, n_reduce: usize) {
     let mut kvs: HashMap<String, String> = HashMap::new();
     for i in 0..n_reduce {
         let filename = merge_name(job_name, i);
-        let file = fs::File::open(&filename).expect("read file failed");
+        let mut file_path = PathBuf::from("./data");
+        file_path.push(filename);
+
+        let file = fs::File::open(file_path).expect("read file failed");
         let file = BufReader::new(file);
         for line in file.lines() {
             let line = line.unwrap();
@@ -25,7 +29,7 @@ pub fn merge(job_name: &str, n_reduce: usize) {
     }
     keys.sort();
 
-    let mut file = fs::File::create(&format!("mrtmp.{}", job_name)).expect("create file failed");
+    let mut file = fs::File::create(&format!("./data/mrtmp.{}", job_name)).expect("create file failed");
     for k in keys {
         file.write_all(&format!("{}: {}\n", k, kvs.get(k).unwrap()).into_bytes())
             .expect("failed to write");

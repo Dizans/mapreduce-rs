@@ -3,6 +3,7 @@ use std::io::prelude::*;
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::path::PathBuf;
 
 use crate::utils::*;
 use serde_json;
@@ -14,14 +15,19 @@ pub fn do_map(
     n_reduce: usize,
     map_f: fn(&str, &str) -> Vec<KeyValue>,
 ) {
-    let contents = fs::read_to_string(in_file).expect(&format!("can't read file {}", in_file));
+    let contents = fs::read_to_string(&in_file).expect(&format!("can't read file {}", in_file));
 
     let mut reduce_files: Vec<fs::File> = Vec::with_capacity(n_reduce);
 
+    let in_file_path = PathBuf::from(in_file);
+    let in_file_dir = in_file_path.parent().unwrap();
+
     for i in 0..n_reduce {
         let filename = reduce_name(job_name, map_task, i);
+        let mut out_file = PathBuf::from(&in_file_dir);
+        out_file.push(filename);
         let file =
-            fs::File::create(&filename).expect(&format!("create file {} failed", filename));
+            fs::File::create(&out_file).expect(&format!("create file {:?} failed", out_file));
         reduce_files.push(file)
     }
 
