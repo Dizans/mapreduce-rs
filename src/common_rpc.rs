@@ -14,13 +14,6 @@ use mr::{DoTaskArg, Empty};
 
 pub use mr::DoTaskArg as TaskArg;
 
-pub async fn master_shutdown(
-    client: &mut MasterClient<Channel>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let response = client.shutdown(Request::new(Empty::default())).await?;
-    println!("RESPONSE = {:?}", response);
-    Ok(())
-}
 
 pub async fn worker_do_task(addr: &str, arg: DoTaskArg) -> Result<(), Box<dyn std::error::Error>> {
     let mut addr: String = addr.to_owned();
@@ -39,4 +32,10 @@ pub async fn worker_shutdown(
     let response = client.shutdown(Request::new(Empty::default())).await?;
     println!("RESPONSE = {:?}", response);
     Ok(())
+}
+
+pub fn validate_uri(addr: &mut String){
+    if !addr.starts_with("http"){
+        *addr = format!("http://{}", addr);
+    }
 }

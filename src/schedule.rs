@@ -1,7 +1,11 @@
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::Mutex;
+use tokio::time::delay_for;
+
 use crate::common_rpc::{worker_do_task, TaskArg};
 use crate::utils::*;
 use futures::future::join_all;
-use tokio::sync::broadcast;
 
 #[allow(dead_code)]
 pub async fn schedule(
@@ -9,7 +13,7 @@ pub async fn schedule(
     map_files: Vec<String>,
     n_reduce: usize,
     phase: JobPhase,
-    register_rx: broadcast::Receiver<String>,
+    free_workers: Arc<Mutex<Vec<String>>>,
 ) {
     let n_tasks: usize;
     let n_other: usize;
@@ -27,24 +31,7 @@ pub async fn schedule(
     
     println!("Schedule: {} {:?} tasks ({} I/Os)", n_tasks, phase, n_other);
 
-    let (tx, _) = broadcast::channel(10);
 
-    let waitting_tx = tx.clone();
-
-    let mut register_rx = register_rx;
-    let handle = tokio::spawn(async move {
-         loop {
-            println!("waitting register");
-            let address = register_rx.recv().await.unwrap();
-            println!("got a new address: {}", address);
-            match waitting_tx.send(address){
-                Ok(_) => {},
-                Err(_) => break,
-            }
-            break;
-        }
-    });
-    println!("n task: {}", n_tasks);
     let mut handles = vec![];
     for i in 0..n_tasks {
         let phase = phase.clone();
@@ -62,15 +49,24 @@ pub async fn schedule(
             }
         }
 
-        let tx = tx.clone();
-        let mut rx = tx.subscribe();
-
         let job_name = job_name.clone();
 
+        let shared_workers = free_workers.clone();
         let handle = tokio::spawn(async move {
-            println!("waitting for free worker");
-            let w = rx.recv().await.unwrap();
-            println!("processing {}", w);
+            
+            let worker;
+            loop{    
+                let mut arr = shared_workers.lock().await;
+                let len = arr.len();
+                if len < 1{
+                    drop(arr);
+                    delay_for(Duration::from_secs(2)).await;
+                    continue;
+                }
+                worker = arr.remove(len - 1);
+                break;         
+            }
+            println!("processing {}", worker);
 
             println!("scheduling {} task to workers", file);
             let arg = TaskArg {
@@ -80,10 +76,12 @@ pub async fn schedule(
                 task_number: i as i32,
                 num_other_phase: n_other as i32,
             };
-            worker_do_task(&w, arg)
+            worker_do_task(&worker, arg)
                 .await
                 .expect("worker do task failed");
-            tx.send(w).unwrap();
+
+            let mut arr = shared_workers.lock().await;
+            arr.push(worker);
             println!("handle a work");
         });
         handles.push(handle);

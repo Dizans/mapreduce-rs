@@ -1,27 +1,29 @@
 use std::time::Duration;
+use std::sync::Arc;
 
 use tokio::time::delay_for;
-use tokio::sync::broadcast;
 use tokio::sync::Mutex;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
+
+use futures::future::join_all;
 
 pub mod mr {
     tonic::include_proto!("mr");
 }
 
 use mr::master_server::{Master, MasterServer};
-use mr::master_client::MasterClient;
 use mr::worker_client::WorkerClient;
+use mr::master_client::MasterClient;
 use mr::{Empty, WorkerAddr};
 use crate::schedule::schedule;
 use crate::utils::*;
 use crate::master_splitmerge::merge;
+use crate::common_rpc::validate_uri;
 
 
 struct MasterService {
-    workers: Mutex<Vec<String>>,
-    sender: broadcast::Sender<String>,
+    workers: Arc<Mutex<Vec<String>>>,
 }
 
 #[tonic::async_trait]
@@ -32,7 +34,6 @@ impl Master for MasterService {
         let addr = request.into_inner().addr;
         workers.push(addr.clone());
         println!("current workders: {:?}", workers);
-        self.sender.send(addr).unwrap();
         Ok(Response::new(Empty::default()))
     }
 
@@ -40,21 +41,22 @@ impl Master for MasterService {
         println!("shuting down master server");
         let workders = self.workers.lock().await;
         for worker in workders.iter(){
-            let mut client = WorkerClient::connect(format!("{}", worker)).await.unwrap();
+            let mut worker_addr = format!("{}", worker);
+            validate_uri(&mut worker_addr);
+            let mut client = WorkerClient::connect(worker_addr).await.unwrap();
             match client.shutdown(Request::new(Empty::default())).await{
                 Ok(_) => {},
                 Err(_) => {},
             };
         }
-        std::process::exit(0x0111);
+        std::process::exit(1);
     }
 }
 
 impl MasterService {
-    pub fn new(sender: broadcast::Sender<String>) -> Self {
+    pub fn new(workers: Arc<Mutex<Vec<String>>>) -> Self {
         MasterService {
-            workers: Mutex::new(Vec::new()),
-            sender,
+            workers,
         }
     }
 }
@@ -66,48 +68,51 @@ pub async fn distribucted(
     n_reduce: usize,
     master_addr: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let (tx, _rx) = broadcast::channel(3);
-
-    let t = tx.clone();
+    let free_workers = Arc::new(Mutex::new(vec![]));
+    let workers = free_workers.clone();
 
     let addr_for_finish = master_addr.clone();
     let handle = tokio::spawn(async move{
+        delay_for(Duration::from_secs(5)).await;
         schedule(
                 job_name.clone(), 
                 files.clone(), 
                 n_reduce, 
                 JobPhase::MapPhase, 
-                t.subscribe()).await;
+                free_workers.clone()).await;
 
         schedule(
                 job_name.clone(), 
                 files.clone(), 
                 n_reduce, 
                 JobPhase::ReducePhase, 
-                t.subscribe()).await;
-        finish(addr_for_finish).await;
+                free_workers.clone()).await;
         merge(&job_name, n_reduce);
+        finish(addr_for_finish).await;  
     });
-    let route_guide = MasterService::new(tx);
+    let route_guide = MasterService::new(workers);
 
     let addr = master_addr.parse().unwrap();
     let svc = MasterServer::new(route_guide);
-    tokio::spawn(async move {
+    let server_handle = tokio::spawn(async move {
         Server::builder().add_service(svc).serve(addr).await
             .expect("start master server failed");
     });
     
-    delay_for(Duration::from_secs(10)).await;
-    handle.await.expect("run job failed");
+    join_all(vec![handle, server_handle]).await;
     Ok(())
 }
 
 
 async fn finish(addr: String){
-    // let mut client = MasterClient::connect(addr).await
-    //                 .expect("connect master server failed");
+    let mut addr = addr;
+    validate_uri(&mut addr);
+    println!(" finish {}", addr);
     
-    // let _ = client.shutdown(Request::new(Empty::default())).await
-    //             .expect("shutdown server failed");
+    let mut client = MasterClient::connect(addr).await
+                    .expect("connect master server failed");
+    
+    let _ = client.shutdown(Request::new(Empty::default())).await
+                .expect("shutdown server failed");
     println!("finished")
 }
