@@ -32,7 +32,7 @@ impl Worker for WorkerService {
         let mut nc = self.concurrent.lock().unwrap();
         *nc += 1;
         if *nc > 1 {
-            println!("more than one work sent concurrently to a single worker");
+            panic!("more than one work sent concurrently to a single worker");
         }
 
         drop(nc);
@@ -114,5 +114,5 @@ pub async fn run_worker(master_addr: String, worker_addr: String){
     regist_to_master(master_addr.clone(), worker_addr.clone()).await.expect("register to master failed");
     // delay_for(Duration::from_secs(5)).await;
     // regist_to_master(master_addr, worker_addr).await.expect("register to master failed");
-    handle.await;
+    handle.await.unwrap();
 }

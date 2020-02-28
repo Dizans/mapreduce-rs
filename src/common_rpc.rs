@@ -2,12 +2,10 @@
 use tonic::transport::Channel;
 use tonic::Request;
 
-use std::net::SocketAddr;
 pub mod mr {
     tonic::include_proto!("mr");
 }
 
-use mr::master_client::MasterClient;
 
 use mr::worker_client::WorkerClient;
 use mr::{DoTaskArg, Empty};
