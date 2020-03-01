@@ -1,11 +1,13 @@
 use std::sync::Arc;
 use std::time::Duration;
+
 use tokio::sync::Mutex;
 use tokio::time::delay_for;
+use futures::future::join_all;
+use log::info;
 
 use crate::common_rpc::{worker_do_task, TaskArg};
 use crate::utils::*;
-use futures::future::join_all;
 
 #[allow(dead_code)]
 pub async fn schedule(
@@ -29,7 +31,7 @@ pub async fn schedule(
         }
     }
     
-    println!("Schedule: {} {:?} tasks ({} I/Os)", n_tasks, phase, n_other);
+    info!("Schedule: {} {:?} tasks ({} I/Os)", n_tasks, phase, n_other);
 
 
     let mut handles = vec![];
@@ -66,9 +68,7 @@ pub async fn schedule(
                 worker = arr.remove(len - 1);
                 break;         
             }
-            println!("processing {}", worker);
-
-            println!("scheduling {} task to workers", file);
+            info!("scheduling {} task to {}", file, worker);
             let arg = TaskArg {
                 job_name,
                 file,
@@ -82,12 +82,12 @@ pub async fn schedule(
 
             let mut arr = shared_workers.lock().await;
             arr.push(worker);
-            println!("handle a work");
+            info!("work finished");
         });
         handles.push(handle);
     }
     
     join_all(handles).await;
-    println!("schdule finished");
+    info!("schdule finished");
     // handle.await.expect("send worker task failed");
 }

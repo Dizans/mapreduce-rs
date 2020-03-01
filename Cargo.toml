@@ -8,7 +8,9 @@ edition = "2018"
 
 [dependencies]
 log = "0.4"
+env_logger = "0.7.1"
 clap = "2.33.0"
+chrono = { version = "0.4", features = ["serde"] }
 # tarpc = { version = "0.20", path = "../tarpc", features = ["full"] }
 tonic = { version = "0.1.1", features = ["tls"] }
 prost = "0.6"
@@ -27,6 +29,5 @@ tracing-attributes = "0.1"
 tracing-futures = "0.2"
 # Required for wellknown types
 prost-types = "0.6"
-
 [build-dependencies]
 tonic-build = "0.1.1"

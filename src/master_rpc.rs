@@ -5,7 +5,7 @@ use tokio::time::delay_for;
 use tokio::sync::Mutex;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
-
+use log::info;
 use futures::future::join_all;
 
 pub mod mr {
@@ -29,16 +29,16 @@ struct MasterService {
 #[tonic::async_trait]
 impl Master for MasterService {
     async fn register(&self, request: Request<WorkerAddr>) -> Result<Response<Empty>, Status> {
-        println!("got a registr request from {:?}", request);
+        info!("got a registr request from {:?}", request);
         let mut workers = self.workers.lock().await;
         let addr = request.into_inner().addr;
         workers.push(addr.clone());
-        println!("current workders: {:?}", workers);
+        info!("current workders: {:?}", workers);
         Ok(Response::new(Empty::default()))
     }
 
     async fn shutdown(&self, _: Request<Empty>) -> Result<Response<Empty>, Status> {
-        println!("shuting down master server");
+        info!("shuting down master server");
         let workders = self.workers.lock().await;
         for worker in workders.iter(){
             let mut worker_addr = format!("{}", worker);
@@ -107,12 +107,12 @@ pub async fn distribucted(
 async fn finish(addr: String){
     let mut addr = addr;
     validate_uri(&mut addr);
-    println!(" finish {}", addr);
+    info!(" finish {}", addr);
     
     let mut client = MasterClient::connect(addr).await
                     .expect("connect master server failed");
     
     let _ = client.shutdown(Request::new(Empty::default())).await
                 .expect("shutdown server failed");
-    println!("finished")
+    info!("finished")
 }

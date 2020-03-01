@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use tonic::transport::Channel;
 use tonic::Request;
+use log::iofo;
 
 pub mod mr {
     tonic::include_proto!("mr");
@@ -28,7 +29,7 @@ pub async fn worker_shutdown(
     client: &mut WorkerClient<Channel>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let response = client.shutdown(Request::new(Empty::default())).await?;
-    println!("RESPONSE = {:?}", response);
+    info!("RESPONSE = {:?}", response);
     Ok(())
 }
 

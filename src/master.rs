@@ -4,7 +4,10 @@ use crate::common_reduce::do_reduce;
 use crate::utils::*;
 use crate::wc;
 use crate::master_splitmerge::merge;
+
 use std::thread;
+
+use log::info;
 
 pub use crate::master_rpc::distribucted as start_master_server;
 
@@ -15,12 +18,12 @@ pub fn run<F: Fn(JobPhase)>(
     schedule:F,
     finish: fn(),
 ) {
-    println!("Start run: ");
+    info!("Start run: ");
     schedule(JobPhase::MapPhase);
     schedule(JobPhase::ReducePhase);
     finish();
     merge(&job_name, n_reduce);
-    println!("Run finish");
+    info!("Run finish");
 }
 
 #[allow(non_snake_case)]
@@ -61,7 +64,7 @@ pub fn sequential(
 }
 
 fn seq_finish() {
-    println!("check the mrtmp.{{jobname}} file for result");
+    info!("check the mrtmp.{{jobname}} file for result");
 }
 
 fn wc_seq() {

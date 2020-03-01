@@ -4,6 +4,7 @@ use std::sync::Mutex;
 use tokio::time::delay_for;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
+use log::info;
 
 pub mod mr {
     tonic::include_proto!("mr");
@@ -62,13 +63,13 @@ impl Worker for WorkerService {
     }
 
     async fn shutdown(&self, _: Request<Empty>) -> Result<Response<Empty>, Status> {
-        println!("shuting down master server");
+        info!("shuting down master server");
         std::process::exit(0x0111);
     }
 }
 
 async fn regist_to_master(master_addr: String, worker_addr: String) -> Result<(), Box<dyn std::error::Error>> {
-    println!("worker register to {}",master_addr);
+    info!("worker register to {}",master_addr);
     let mut master_addr = master_addr;
     if !master_addr.starts_with("http"){
         master_addr = format!("http://{}", master_addr);
@@ -83,13 +84,13 @@ async fn regist_to_master(master_addr: String, worker_addr: String) -> Result<()
         )
         .await?;
 
-    println!("register response = {:?}", response);
+    info!("register response = {:?}", response);
     Ok(())
 }
 
 async fn start_server(addr: &str) -> Result<(), Box<dyn std::error::Error>> {
     let addr = addr.parse().expect("Invalid worker addr");
-    println!("Worker listening on: {}", addr);
+    info!("Worker listening on: {}", addr);
 
     let route_guide = WorkerService {
         concurrent: Mutex::new(0),

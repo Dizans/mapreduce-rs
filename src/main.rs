@@ -10,17 +10,18 @@ mod wc;
 mod worker;
 
 use std::env;
+use std::io::{self, Write};
 
 use master::sequential;
 use master_rpc::distribucted;
 use worker::run_worker;
 
+use chrono::Local; 
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = env::args().collect();
-    for arg in &args{
-        println!("{}", arg);
-    }
+    log_init();
+    
     if args.len() < 4{
        usage(); 
     }else if &args[1]=="master"{
@@ -28,8 +29,6 @@ async fn main() {
         let files = files.to_owned();
         let addr = args[2].to_owned();
         
-        println!("{:?}", addr);
-
         if &args[2] == "sequential"{
             sequential("wcseq".to_owned(), files, 3, wc::map, wc::reduce);
         }else{
@@ -49,4 +48,23 @@ Can be run in 3 ways:
 3) Worker (e.g., cargo run -- worker 127.0.0.1:7777 127.0.0.1:8888 &)
 ";
     println!("{}", usage);
+}
+
+pub fn log_init(){
+    let env = env_logger::Env::default()
+        .filter_or(env_logger::DEFAULT_FILTER_ENV, "trace");
+
+    env_logger::Builder::from_env(env)
+    .format(|_, record| {
+        let mut stderr = io::stderr();
+        writeln!(
+            stderr,
+            "{} {} [{}] {}",
+            Local::now().format("%Y-%m-%d %H:%M:%S"),
+            record.level(),
+            record.module_path().unwrap_or("<unnamed>"),
+            &record.args()
+        )
+    })
+    .init();
 }
